@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OB/GYN Residency Program Dashboard | MCH Hafr Al-Batin</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<style>
+  :root {
+    --primary: #1a4975;
+    --accent: #0d7c66;
+    --red: #c0392b;
+    --orange: #e67e22;
+    --purple: #6c3483;
+    --blue2: #2e86ab;
+    --bg: #f0f4f8;
+    --card: #ffffff;
+    --text: #1a1a1a;
+    --muted: #546e7a;
+    --border: #d0dce8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+  /* HEADER */
+  .top-bar {
+    background: var(--primary);
+    color: #fff;
+    padding: 14px 32px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .top-bar .brand { font-size: 1rem; font-weight: 700; }
+  .top-bar .sub { font-size: 0.78rem; opacity: 0.85; }
+  .top-bar .badge { background: var(--accent); font-size: 0.72rem; padding: 4px 12px; border-radius: 3px; font-weight: 600; }
+
+  /* NAV TABS */
+  .nav-tabs { background: #fff; border-bottom: 2px solid var(--border); padding: 0 32px; display: flex; gap: 0; overflow-x: auto; }
+  .nav-tab { padding: 12px 22px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; color: var(--muted); white-space: nowrap; transition: all 0.2s; }
+  .nav-tab:hover { color: var(--primary); background: #f5f8fc; }
+  .nav-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+  /* CONTENT */
+  .tab-content { display: none; padding: 28px 32px; }
+  .tab-content.active { display: block; }
+
+  /* GRID */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+  /* CARD */
+  .card { background: var(--card); border-radius: 8px; border: 1px solid var(--border); padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+  .card h3 { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 14px; }
+  .card.full { grid-column: 1 / -1; }
+
+  /* STAT CARDS */
+  .stat-card { text-align: center; padding: 22px 16px; border-radius: 8px; color: #fff; }
+  .stat-card .num { font-size: 2.6rem; font-weight: 800; line-height: 1; }
+  .stat-card .lbl { font-size: 0.78rem; margin-top: 6px; opacity: 0.9; }
+  .stat-card.blue { background: var(--primary); }
+  .stat-card.green { background: var(--accent); }
+  .stat-card.red { background: var(--red); }
+  .stat-card.orange { background: var(--orange); }
+  .stat-card.purple { background: var(--purple); }
+  .stat-card.blue2 { background: var(--blue2); }
+
+  /* KPI TABLE */
+  .kpi-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+  .kpi-table th { background: var(--primary); color: #fff; padding: 9px 12px; text-align: left; font-size: 0.8rem; }
+  .kpi-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .kpi-table tr:hover td { background: #f0f4f8; }
+  .badge-compliant { background: #d4edda; color: #155724; font-size: 0.72rem; padding: 3px 9px; border-radius: 3px; font-weight: 700; }
+  .badge-active { background: #cce5ff; color: #004085; font-size: 0.72rem; padding: 3px 9px; border-radius: 3px; font-weight: 700; }
+  .badge-pending { background: #fff3cd; color: #856404; font-size: 0.72rem; padding: 3px 9px; border-radius: 3px; font-weight: 700; }
+
+  /* CALENDAR */
+  .calendar-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .cal-day { border-radius: 6px; padding: 10px; min-height: 120px; border: 1px solid var(--border); }
+  .cal-day .day-title { font-size: 0.85rem; font-weight: 700; color: var(--primary); margin-bottom: 6px; border-bottom: 2px solid var(--primary); padding-bottom: 4px; }
+  .cal-day .phase-badge { font-size: 0.68rem; font-weight: 700; padding: 2px 6px; border-radius: 3px; margin-bottom: 6px; display: inline-block; }
+  .phase1 { background: #dbeafe; color: #1e40af; }
+  .phase2 { background: #dcfce7; color: #166534; }
+  .phase3 { background: #fef9c3; color: #854d0e; }
+  .phase4 { background: #fce7f3; color: #9d174d; }
+  .cal-day ul { list-style: none; padding: 0; }
+  .cal-day li { font-size: 0.73rem; color: var(--muted); padding: 2px 0; border-bottom: 1px dotted #ddd; }
+  .cal-day li:last-child { border-bottom: none; }
+
+  /* ROTATION TIMELINE */
+  .timeline { position: relative; padding: 8px 0; }
+  .timeline-row { display: flex; align-items: center; margin-bottom: 6px; gap: 10px; }
+  .timeline-row .yr-label { width: 80px; font-size: 0.78rem; font-weight: 700; color: var(--primary); text-align: right; flex-shrink: 0; }
+  .timeline-row .bar-wrap { flex: 1; display: flex; gap: 3px; flex-wrap: wrap; }
+  .rot-bar { height: 26px; border-radius: 4px; display: flex; align-items: center; padding: 0 8px; font-size: 0.7rem; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* PROGRESS BARS */
+  .progress-item { margin-bottom: 12px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 4px; }
+  .progress-bar { height: 10px; background: #e9ecef; border-radius: 5px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 5px; transition: width 0.8s ease; }
+
+  /* CHART CONTAINERS */
+  .chart-box { width: 100%; height: 280px; }
+  .chart-box-tall { width: 100%; height: 360px; }
+
+  /* CANMEDS PILLS */
+  .canmeds-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+  .cm-pill { border-radius: 6px; padding: 14px 8px; text-align: center; }
+  .cm-pill .icon { font-size: 1.4rem; margin-bottom: 6px; }
+  .cm-pill .cm-name { font-size: 0.72rem; font-weight: 700; }
+  .cm-pill .cm-def { font-size: 0.65rem; color: #555; margin-top: 4px; line-height: 1.3; }
+
+  /* FOOTER */
+  footer { background: var(--primary); color: #fff; text-align: center; padding: 14px; font-size: 0.78rem; margin-top: 28px; opacity: 0.9; }
+
+  @media (max-width: 900px) {
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    .canmeds-grid { grid-template-columns: repeat(4, 1fr); }
+    .calendar-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div>
+    <div class="brand">OB/GYN Residency Program Dashboard</div>
+    <div class="sub">Maternity &amp; Children Hospital | Hafr Al-Batin Health Cluster | Saudi Board Residency (SBOG)</div>
+  </div>
+  <div class="badge">SCFHS ACCREDITED PROGRAM</div>
+</div>
+
+<div class="nav-tabs">
+  <div class="nav-tab active" onclick="showTab('overview')">Program Overview</div>
+  <div class="nav-tab" onclick="showTab('calendar')">Orientation Calendar</div>
+  <div class="nav-tab" onclick="showTab('rotations')">Rotation Plan</div>
+  <div class="nav-tab" onclick="showTab('competency')">Competency Framework</div>
+  <div class="nav-tab" onclick="showTab('kpis')">KPI Dashboard</div>
+  <div class="nav-tab" onclick="showTab('compliance')">SCFHS Compliance</div>
+</div>
+
+<!-- ═════════════ TAB 1: OVERVIEW ═════════════ -->
+<div id="tab-overview" class="tab-content active">
+
+  <div class="grid-4" style="margin-bottom:20px;">
+    <div class="stat-card blue"><div class="num">5</div><div class="lbl">Years of Training (R1–R5)</div></div>
+    <div class="stat-card green"><div class="num">260</div><div class="lbl">Total Training Weeks</div></div>
+    <div class="stat-card orange"><div class="num">10</div><div class="lbl">Orientation Days</div></div>
+    <div class="stat-card red"><div class="num">18</div><div class="lbl">Mandatory Rotations</div></div>
+    <div class="stat-card purple"><div class="num">13</div><div class="lbl">Mandatory Workshops</div></div>
+    <div class="stat-card blue2"><div class="num">7</div><div class="lbl">CanMEDS Competency Roles</div></div>
+    <div class="stat-card green"><div class="num">22</div><div class="lbl">SCFHS Components — Compliant</div></div>
+    <div class="stat-card blue"><div class="num">100%</div><div class="lbl">SCFHS Compliance Rate</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Program Vision &amp; Mission</h3>
+      <p style="margin-bottom:10px; font-size:0.85rem; color:#2e86ab; font-weight:600;">Vision</p>
+      <p style="font-size:0.85rem; margin-bottom:14px;">To become a leading SCFHS-accredited training center producing competent, safe, and innovative obstetricians and gynecologists for the Kingdom of Saudi Arabia.</p>
+      <p style="margin-bottom:10px; font-size:0.85rem; color:#0d7c66; font-weight:600;">Mission</p>
+      <p style="font-size:0.85rem;">To graduate competent, safe, skilled, and knowledgeable specialists capable of functioning independently in obstetrics and gynecology, demonstrating clinical excellence, professionalism, patient safety commitment, and lifelong learning.</p>
+    </div>
+    <div class="card">
+      <h3>Core Education Program (CEP) Breakdown</h3>
+      <div id="cep-chart" class="chart-box"></div>
+    </div>
+
+    <div class="card">
+      <h3>Training Level Progression (Weeks per Year)</h3>
+      <div id="rotation-chart" class="chart-box"></div>
+    </div>
+    <div class="card">
+      <h3>Key Program Facts — MCH Hafr Al-Batin</h3>
+      <table style="width:100%; border-collapse:collapse; font-size:0.84rem;">
+        <tr style="border-bottom:1px solid #ddd;"><td style="padding:7px; color:#546e7a; width:48%;">Hospital Beds</td><td style="padding:7px; font-weight:700;">300 beds</td></tr>
+        <tr style="border-bottom:1px solid #ddd; background:#f8f9fa;"><td style="padding:7px; color:#546e7a;">Established</td><td style="padding:7px; font-weight:700;">May 2013 (Hafr Al-Batin)</td></tr>
+        <tr style="border-bottom:1px solid #ddd;"><td style="padding:7px; color:#546e7a;">Program Director</td><td style="padding:7px; font-weight:700;">Dr. Abdullah Albasha</td></tr>
+        <tr style="border-bottom:1px solid #ddd; background:#f8f9fa;"><td style="padding:7px; color:#546e7a;">Curriculum Edition</td><td style="padding:7px; font-weight:700;">SCFHS OB/GYN 2022</td></tr>
+        <tr style="border-bottom:1px solid #ddd;"><td style="padding:7px; color:#546e7a;">Min. On-Call (Junior R1–R3)</td><td style="padding:7px; font-weight:700;">6 calls/month (24h each)</td></tr>
+        <tr style="border-bottom:1px solid #ddd; background:#f8f9fa;"><td style="padding:7px; color:#546e7a;">Min. On-Call (Senior R4–R5)</td><td style="padding:7px; font-weight:700;">5 calls/month (24h each)</td></tr>
+        <tr style="border-bottom:1px solid #ddd;"><td style="padding:7px; color:#546e7a;">Min. Attendance Required</td><td style="padding:7px; font-weight:700;">75% for promotion</td></tr>
+        <tr style="border-bottom:1px solid #ddd; background:#f8f9fa;"><td style="padding:7px; color:#546e7a;">Protected Academic Time</td><td style="padding:7px; font-weight:700;">≥4 hrs/week</td></tr>
+        <tr><td style="padding:7px; color:#546e7a;">Board Certification</td><td style="padding:7px; font-weight:700;">Saudi Board in OB/GYN (SBOG)</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════════ TAB 2: ORIENTATION CALENDAR ═════════════ -->
+<div id="tab-calendar" class="tab-content">
+  <div class="card" style="margin-bottom:16px;">
+    <h3>10-Day Orientation Program — Phase Overview</h3>
+    <div style="display:flex; gap:20px; flex-wrap:wrap; font-size:0.83rem;">
+      <div style="display:flex; align-items:center; gap:8px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#1e40af;"></span> Phase 1 (Days 1–2): Admin &amp; Institutional Orientation</div>
+      <div style="display:flex; align-items:center; gap:8px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#166534;"></span> Phase 2 (Days 3–5): Clinical Protocols &amp; Safety</div>
+      <div style="display:flex; align-items:center; gap:8px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#854d0e;"></span> Phase 3 (Days 6–8): Academic, Research &amp; Assessment</div>
+      <div style="display:flex; align-items:center; gap:8px;"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#9d174d;"></span> Phase 4 (Days 9–10): Supervised Clinical Practice</div>
+    </div>
+  </div>
+  <div class="calendar-grid">
+    <div class="cal-day" style="background:#eff6ff;">
+      <div class="day-title">Day 1 — Week 1</div>
+      <span class="phase-badge phase1">Phase 1 — Admin</span>
+      <ul>
+        <li>Welcome Address &amp; Introductions</li>
+        <li>MCH Vision, Mission &amp; Org Structure</li>
+        <li>SCFHS Residency Overview</li>
+        <li>Hospital Tour (All Departments)</li>
+        <li>EMR System Training</li>
+        <li>HR Onboarding &amp; ID Badge</li>
+        <li>SCFHS Logbook &amp; Portfolio Setup</li>
+      </ul>
+    </div>
+    <div class="cal-day" style="background:#eff6ff;">
+      <div class="day-title">Day 2 — Week 1</div>
+      <span class="phase-badge phase1">Phase 1 — Admin</span>
+      <ul>
+        <li>Duty Hours &amp; On-Call System</li>
+        <li>Professionalism &amp; Medical Ethics</li>
+        <li>Communication Skills in OB/GYN</li>
+        <li>Supervision &amp; Escalation Pathways</li>
+        <li>Patient Safety Culture (SPSC)</li>
+        <li>Incident Reporting System (IRS)</li>
+      </ul>
+    </div>
+    <div class="cal-day" style="background:#f0fdf4;">
+      <div class="day-title">Day 3 — Week 1</div>
+      <span class="phase-badge phase2">Phase 2 — Clinical Safety</span>
+      <ul>
+        <li>Infection Control &amp; IPC Protocols</li>
+        <li>Code Blue &amp; Emergency Response</li>
+        <li>BLS Certification (Mandatory)</li>
+        <li>Fire Safety &amp; Hospital Codes</li>
+        <li>Medication Safety &amp; Antibiotic Stewardship</li>
+      </ul>
+    </div>
+    <div class="cal-day" style="background:#f0fdf4;">
+      <div class="day-title">Day 4 — Week 1</div>
+      <span class="phase-badge phase2">Phase 2 — Clinical Safety</span>
+      <ul>
+        <li>Antenatal Care Protocols</li>
+        <li>Labor &amp; Delivery Management</li>
+        <li>Obstetric Emergency Drills</li>
+        <li>Neonatal Resuscitation (NRP)</li>
+        <li>Operative Obstetrics Consent</li>
+      </ul>
+    </div>
+    <div class="cal-day" style="background:#f0fdf4;">
+      <div class="day-title">Day 5 — Week 1</div>
+      <span class="phase-badge phase2">Phase 2 — Clinical Safety</span>
+      <ul>
+        <li>Gynecology Clinical Protocols</li>
+        <li>Surgical Safety &amp; WHO Checklist</li>
+        <li>Gynecologic Oncology Overview</li>
+        <li>Family Planning Protocols</li>
+        <li>Pap Smear &amp; Cervical Screening</li>
+      </ul>
+    </div>
+    <div class="cal-day" style="background:#fefce8;">
+      <div class="day-title">Day 6 — Week 2</div>
+      <span class="phase-badge phase3">Phase 3 — Academic</span>
+      <ul>
+        <li>SCFHS Core Education Program (CEP)</li>
+        <li>Evidence-Based Medicine (EBM) Workshop</li>
+        <li>Journal Club Orientation</li>
+        <li>Case Presentation Skills</li>
+        <li>Grand Rounds &amp; M&amp;M Structure</li>
+      </ul>
+    </div>
+    <div class="cal-day" style="background:#fefce8;">
+      <div class="day-title">Day 7 — Week 2</div>
+      <span class="phase-badge phase3">Phase 3 — Academic</span>
+      <ul>
+        <li>Research Program Overview (R1–R4)</li>
+        <li>Research Methodology Workshop (Day 1)</li>
+        <li>Obstetric Emergency Simulation Drills</li>
+        <li>CTG Interpretation Workshop</li>
+        <li>Logbook First Entry Completion</li>
+      </ul>
+    </div>
+    <div class="cal-day" style="background:#fefce8;">
+      <div class="day-title">Day 8 — Week 2</div>
+      <span class="phase-badge phase3">Phase 3 — Academic</span>
+      <ul>
+        <li>Assessment Framework Orientation</li>
+        <li>PRE-ORIENTATION MCQ (30 items)</li>
+        <li>Mentor Assignment &amp; Program</li>
+        <li>Saudi Board Exam Pathway</li>
+        <li>Wellness &amp; Burnout Prevention</li>
+      </ul>
+    </div>
+    <div class="cal-day" style="background:#fdf2f8;">
+      <div class="day-title">Day 9 — Week 2</div>
+      <span class="phase-badge phase4">Phase 4 — Clinical</span>
+      <ul>
+        <li>Morning Handover Observation (SBAR)</li>
+        <li>Supervised Labor Ward Rounds</li>
+        <li>Antenatal Assessments &amp; CTG Review</li>
+        <li>OB/GYN Emergency Department Tour</li>
+        <li>ER Triage &amp; Documentation</li>
+      </ul>
+    </div>
+    <div class="cal-day" style="background:#fdf2f8;">
+      <div class="day-title">Day 10 — Week 2</div>
+      <span class="phase-badge phase4">Phase 4 — Clinical</span>
+      <ul>
+        <li>Supervised OPD Clinic Attendance</li>
+        <li>OR Observation (Elective Case)</li>
+        <li>POST-ORIENTATION Assessment (MCQ + OSCE)</li>
+        <li>Orientation Completion Ceremony</li>
+        <li>Feedback Survey &amp; Q&amp;A</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════════ TAB 3: ROTATION PLAN ═════════════ -->
+<div id="tab-rotations" class="tab-content">
+  <div class="grid-2" style="margin-bottom:20px;">
+    <div class="card">
+      <h3>Total Training Weeks by Year</h3>
+      <div id="weeks-chart" class="chart-box"></div>
+    </div>
+    <div class="card">
+      <h3>Rotation Type Distribution</h3>
+      <div id="rotation-type-chart" class="chart-box"></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>5-Year Training Timeline</h3>
+    <div class="timeline" style="padding: 12px 0;">
+      <div class="timeline-row">
+        <div class="yr-label">R1 (52 wks)</div>
+        <div class="bar-wrap">
+          <div class="rot-bar" style="background:#1a4975; width:calc(8/52 * 100% - 3px); min-width:60px;">OB/GYN Orient. (8w)</div>
+          <div class="rot-bar" style="background:#2e86ab; width:calc(26/52 * 100% - 3px); min-width:60px;">General Obstetrics (26w)</div>
+          <div class="rot-bar" style="background:#0d7c66; width:calc(18/52 * 100% - 3px); min-width:60px;">General Gynecology (18w)</div>
+        </div>
+      </div>
+      <div class="timeline-row">
+        <div class="yr-label">R2 (52 wks)</div>
+        <div class="bar-wrap">
+          <div class="rot-bar" style="background:#2e86ab; width:calc(40/52 * 100% - 3px); min-width:100px;">General OB/GYN (40w)</div>
+          <div class="rot-bar" style="background:#e67e22; width:calc(4/52 * 100% - 3px); min-width:40px;">NICU (4w)</div>
+          <div class="rot-bar" style="background:#c0392b; width:calc(4/52 * 100% - 3px); min-width:40px;">Anaes. (4w)</div>
+          <div class="rot-bar" style="background:#8e44ad; width:calc(4/52 * 100% - 3px); min-width:40px;">ICU (4w)</div>
+        </div>
+      </div>
+      <div class="timeline-row">
+        <div class="yr-label">R3 (52 wks)</div>
+        <div class="bar-wrap">
+          <div class="rot-bar" style="background:#2e86ab; width:calc(28/52 * 100% - 3px); min-width:90px;">General OB/GYN (28w)</div>
+          <div class="rot-bar" style="background:#e67e22; width:calc(4/52 * 100% - 3px); min-width:35px;">FP (4w)</div>
+          <div class="rot-bar" style="background:#16a085; width:calc(8/52 * 100% - 3px); min-width:50px;">MFM (8w)</div>
+          <div class="rot-bar" style="background:#d35400; width:calc(6/52 * 100% - 3px); min-width:40px;">US (6w)</div>
+          <div class="rot-bar" style="background:#6c3483; width:calc(6/52 * 100% - 3px); min-width:40px;">Research (6w)</div>
+        </div>
+      </div>
+      <div class="timeline-row">
+        <div class="yr-label">R4 (52 wks)</div>
+        <div class="bar-wrap">
+          <div class="rot-bar" style="background:#2e86ab; width:calc(24/52 * 100% - 3px); min-width:80px;">General OB/GYN (24w)</div>
+          <div class="rot-bar" style="background:#c0392b; width:calc(12/52 * 100% - 3px); min-width:50px;">Gyn Oncology (12w)</div>
+          <div class="rot-bar" style="background:#8e44ad; width:calc(8/52 * 100% - 3px); min-width:45px;">REI (8w)</div>
+          <div class="rot-bar" style="background:#1a7850; width:calc(8/52 * 100% - 3px); min-width:45px;">Urogyn (8w)</div>
+        </div>
+      </div>
+      <div class="timeline-row">
+        <div class="yr-label">R5 (52 wks)</div>
+        <div class="bar-wrap">
+          <div class="rot-bar" style="background:#1a4975; width:calc(48/52 * 100% - 3px); min-width:150px;">General OB/GYN — Senior (48w)</div>
+          <div class="rot-bar" style="background:#546e7a; width:calc(4/52 * 100% - 3px); min-width:40px;">Elective (4w)</div>
+        </div>
+      </div>
+    </div>
+    <p style="font-size:0.75rem; color:#888; margin-top:12px;">Note: Specialty/subspecialty rotations marked * (junior) or ** (senior) can be taken at any time within their respective training levels.</p>
+  </div>
+</div>
+
+<!-- ═════════════ TAB 4: COMPETENCY FRAMEWORK ═════════════ -->
+<div id="tab-competency" class="tab-content">
+  <div class="card" style="margin-bottom:20px;">
+    <h3>CanMEDS Competency Roles — OB/GYN Program</h3>
+    <div class="canmeds-grid">
+      <div class="cm-pill" style="background:#e3f2fd;">
+        <div class="icon">&#127979;</div>
+        <div class="cm-name" style="color:#1565c0;">Medical Expert</div>
+        <div class="cm-def">Clinical knowledge, skills, and judgment in patient-centered OB/GYN care</div>
+      </div>
+      <div class="cm-pill" style="background:#e8f5e9;">
+        <div class="icon">&#128172;</div>
+        <div class="cm-name" style="color:#2e7d32;">Communicator</div>
+        <div class="cm-def">Effective doctor-patient relationships, informed consent, counseling</div>
+      </div>
+      <div class="cm-pill" style="background:#fff8e1;">
+        <div class="icon">&#129309;</div>
+        <div class="cm-name" style="color:#e65100;">Collaborator</div>
+        <div class="cm-def">Effective teamwork with NICU, ICU, anaesthesia, oncology, nursing</div>
+      </div>
+      <div class="cm-pill" style="background:#fce4ec;">
+        <div class="icon">&#128196;</div>
+        <div class="cm-name" style="color:#880e4f;">Manager</div>
+        <div class="cm-def">Labor ward management, QA, resource allocation, M&amp;M reviews</div>
+      </div>
+      <div class="cm-pill" style="background:#f3e5f5;">
+        <div class="icon">&#127756;</div>
+        <div class="cm-name" style="color:#4a148c;">Health Advocate</div>
+        <div class="cm-def">Women's health promotion, FP, pre-conception counseling</div>
+      </div>
+      <div class="cm-pill" style="background:#e8eaf6;">
+        <div class="icon">&#128214;</div>
+        <div class="cm-name" style="color:#1a237e;">Scholar</div>
+        <div class="cm-def">Research, EBM, journal clubs, teaching medical students</div>
+      </div>
+      <div class="cm-pill" style="background:#e0f2f1;">
+        <div class="icon">&#9997;</div>
+        <div class="cm-name" style="color:#004d40;">Professional</div>
+        <div class="cm-def">Ethics, patient confidentiality, integrity, continuous development</div>
+      </div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <h3>Competency Progression by Role (R1–R5)</h3>
+      <div id="competency-radar" class="chart-box-tall"></div>
+    </div>
+    <div class="card">
+      <h3>Procedural Skills Milestones</h3>
+      <div style="margin-bottom: 14px;">
+        <p style="font-size:0.8rem; color:var(--muted); margin-bottom:10px;"><strong>Skills Grading:</strong> P1 Observe | P2 Assist | P3 Supervised | P4 Independent</p>
+        <div class="progress-item"><div class="progress-label"><span>Normal Vaginal Delivery</span><span>R1: P1–P4 → R2: P4</span></div><div class="progress-bar"><div class="progress-fill" style="width:100%; background:#1a4975;"></div></div></div>
+        <div class="progress-item"><div class="progress-label"><span>Caesarean Section (Primary Surgeon)</span><span>R3: P3 → R5: P4</span></div><div class="progress-bar"><div class="progress-fill" style="width:85%; background:#0d7c66;"></div></div></div>
+        <div class="progress-item"><div class="progress-label"><span>Episiotomy &amp; Perineal Repair</span><span>R1: P1–P4 → R2: P4</span></div><div class="progress-bar"><div class="progress-fill" style="width:100%; background:#1a4975;"></div></div></div>
+        <div class="progress-item"><div class="progress-label"><span>Diagnostic Laparoscopy</span><span>R3: P3 → R5: P2–P3</span></div><div class="progress-bar"><div class="progress-fill" style="width:65%; background:#2e86ab;"></div></div></div>
+        <div class="progress-item"><div class="progress-label"><span>Diagnostic Hysteroscopy</span><span>R3: P3 → R5: P2–P3</span></div><div class="progress-bar"><div class="progress-fill" style="width:65%; background:#2e86ab;"></div></div></div>
+        <div class="progress-item"><div class="progress-label"><span>Abdominal Hysterectomy</span><span>R4: P2–P3 → R5: P3</span></div><div class="progress-bar"><div class="progress-fill" style="width:75%; background:#e67e22;"></div></div></div>
+        <div class="progress-item"><div class="progress-label"><span>Management of PPH</span><span>R2: S → R4: I</span></div><div class="progress-bar"><div class="progress-fill" style="width:90%; background:#c0392b;"></div></div></div>
+        <div class="progress-item"><div class="progress-label"><span>IUCD Insertion/Removal</span><span>R2: P3–P4 → R3: P4</span></div><div class="progress-bar"><div class="progress-fill" style="width:100%; background:#1a4975;"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═════════════ TAB 5: KPI DASHBOARD ═════════════ -->
+<div id="tab-kpis" class="tab-content">
+  <div class="grid-2" style="margin-bottom:20px;">
+    <div class="card">
+      <h3>Academic Assessment Targets</h3>
+      <div id="kpi-bar-chart" class="chart-box"></div>
+    </div>
+    <div class="card">
+      <h3>Board Examination Targets</h3>
+      <div id="kpi-gauge" class="chart-box"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>A. Curriculum Delivery KPIs</h3>
+    <table class="kpi-table">
+      <thead><tr><th>KPI ID</th><th>KPI Name</th><th>SCFHS Standard</th><th>Target</th><th>Frequency</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>KPI-C01</td><td>Orientation Completion Rate</td><td>All residents complete 10-day orientation</td><td>100%</td><td>Per intake cohort</td><td><span class="badge-active">Active</span></td></tr>
+        <tr><td>KPI-C02</td><td>Rotation Schedule Compliance</td><td>All SCFHS rotations completed on schedule</td><td>100%</td><td>Annually</td><td><span class="badge-active">Active</span></td></tr>
+        <tr><td>KPI-C03</td><td>Academic Attendance Rate</td><td>≥75% attendance per resident (SCFHS req.)</td><td>≥75% per resident</td><td>Monthly</td><td><span class="badge-active">Active</span></td></tr>
+        <tr><td>KPI-C04</td><td>Mandatory Workshop Completion</td><td>BLS, Surgical Skills, CTG, Obstetric Emergencies, Risk Mgmt, FP</td><td>100% of mandatory courses</td><td>Annually</td><td><span class="badge-active">Active</span></td></tr>
+        <tr><td>KPI-C05</td><td>Simulation Sessions Conducted</td><td>Quarterly simulation per program</td><td>≥4 sessions/year</td><td>Quarterly</td><td><span class="badge-active">Active</span></td></tr>
+        <tr><td>KPI-C06</td><td>Research Milestone Achievement</td><td>R1–R4 research milestones met on time</td><td>100% of eligible residents</td><td>Annually</td><td><span class="badge-active">Active</span></td></tr>
+        <tr><td>KPI-C07</td><td>Subspecialty Rotation Completion</td><td>All required subspecialties completed</td><td>100% per resident</td><td>Per training year</td><td><span class="badge-active">Active</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h3>B. Assessment &amp; Evaluation KPIs</h3>
+    <table class="kpi-table">
+      <thead><tr><th>KPI ID</th><th>KPI Name</th><th>Target</th><th>Assessor</th><th>Frequency</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>KPI-A01</td><td>Mini-CEX Completion Rate</td><td>100% of rotations</td><td>Consultant/Supervisor</td><td>Per rotation</td><td><span class="badge-active">Active</span></td></tr>
+        <tr><td>KPI-A02</td><td>DOPS Completion Rate</td><td>100% of required DOPS per rotation</td><td>Consultant/Senior Specialist</td><td>Per rotation</td><td><span class="badge-active">Active</span></td></tr>
+        <tr><td>KPI-A03</td><td>ITER Submission Timeliness</td><td>100% submitted within 4 weeks</td><td>Program Director</td><td>Per rotation</td><td><span class="badge-active">Active</span></td></tr>
+        <tr><td>KPI-A04</td><td>Annual MSF Completion</td><td>100% residents annually (≥8 raters)</td><td>Peers/Nurses/Consultants</td><td>Annually</td><td><span class="badge-active">Active</span></td></tr>
+        <tr><td>KPI-A05</td><td>Saudi Board Part I Pass Rate</td><td>≥80% first-attempt pass rate</td><td>SCFHS</td><td>Annually (R3 cohort)</td><td><span class="badge-active">Active</span></td></tr>
+        <tr><td>KPI-A06</td><td>Saudi Board Part II Pass Rate</td><td>≥80% first-attempt pass rate</td><td>SCFHS</td><td>Annually (R5 cohort)</td><td><span class="badge-active">Active</span></td></tr>
+        <tr><td>KPI-A07</td><td>FITER Completion Rate</td><td>100% of R5 residents before board exam</td><td>Program Director</td><td>End of R5</td><td><span class="badge-active">Active</span></td></tr>
+        <tr><td>KPI-A08</td><td>Orientation MCQ Score Improvement</td><td>Mean improvement ≥20% (pre vs. post)</td><td>Training Committee</td><td>Per orientation cohort</td><td><span class="badge-active">Active</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <h3>C. Patient Safety &amp; Quality KPIs</h3>
+    <table class="kpi-table">
+      <thead><tr><th>KPI ID</th><th>KPI Name</th><th>Target</th><th>Responsible</th><th>Frequency</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>KPI-P01</td><td>Adverse Event Reporting Rate</td><td>100% of reportable incidents via IRS</td><td>Quality &amp; Patient Safety Mgr</td><td>Monthly / Per incident</td><td><span class="badge-active">Active</span></td></tr>
+        <tr><td>KPI-P02</td><td>M&amp;M Meeting Frequency</td><td>Minimum 6 meetings/year</td><td>Program Director</td><td>Every 4–8 weeks</td><td><span class="badge-active">Active</span></td></tr>
+        <tr><td>KPI-P03</td><td>Infection Control Compliance</td><td>≥95% compliance (hand hygiene/IPC)</td><td>IPC Officer</td><td>Monthly audit</td><td><span class="badge-active">Active</span></td></tr>
+        <tr><td>KPI-P04</td><td>Safety Workshop Completion</td><td>100% of R1 residents annually</td><td>Program Coordinator</td><td>Annually</td><td><span class="badge-active">Active</span></td></tr>
+        <tr><td>KPI-P05</td><td>WHO Surgical Safety Checklist Compliance</td><td>100% of OR cases involving residents</td><td>OR Charge Nurse / Quality</td><td>Monthly audit</td><td><span class="badge-active">Active</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═════════════ TAB 6: SCFHS COMPLIANCE ═════════════ -->
+<div id="tab-compliance" class="tab-content">
+  <div class="grid-3" style="margin-bottom:20px;">
+    <div class="stat-card green"><div class="num">22</div><div class="lbl">Total Components Reviewed</div></div>
+    <div class="stat-card green"><div class="num">22</div><div class="lbl">Compliant Components</div></div>
+    <div class="stat-card green"><div class="num">100%</div><div class="lbl">SCFHS Compliance Rate</div></div>
+  </div>
+  <div class="card">
+    <h3>SCFHS Standard: "Delivers All Components of the Training Program Curriculum" — Compliance Matrix</h3>
+    <table class="kpi-table">
+      <thead><tr><th>#</th><th>SCFHS Component</th><th>Orientation Coverage</th><th>Ongoing Mechanism</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>5-Year Training Structure (R1–R5, 260 weeks)</td><td>Day 1: Program overview session</td><td>Annual rotation planning; logbook tracking</td><td><span class="badge-compliant">COMPLIANT</span></td></tr>
+        <tr><td>2</td><td>Core OB/GYN Rotations (General Obstetrics &amp; Gynecology)</td><td>Days 9–10: Supervised clinical exposure</td><td>ITER after each rotation; Mini-CEX ×2 minimum</td><td><span class="badge-compliant">COMPLIANT</span></td></tr>
+        <tr><td>3</td><td>Junior Subspecialties: NICU, Anesthesia, ICU (4 weeks each, R2)</td><td>Day 3: Emergency systems; Day 4: NICU orientation</td><td>DOPS ≥2 per rotation; ITER; rounds participation</td><td><span class="badge-compliant">COMPLIANT</span></td></tr>
+        <tr><td>4</td><td>Family Planning &amp; Reproductive Health (R3: 4 weeks)</td><td>Day 5: FP protocols orientation</td><td>Mini-CEX ×2; CBD ×1; ≥5 counseling encounters</td><td><span class="badge-compliant">COMPLIANT</span></td></tr>
+        <tr><td>5</td><td>Maternal-Fetal Medicine Rotation (R3: 8 weeks)</td><td>Day 4: MFM concepts in obstetric emergency session</td><td>Mini-CEX ×2; CBD ×1; case presentation</td><td><span class="badge-compliant">COMPLIANT</span></td></tr>
+        <tr><td>6</td><td>Ultrasound Rotation (R3: 6 weeks)</td><td>Day 4: Fetal monitoring introduced</td><td>DOPS ×3 (ultrasound); supervised scan logbook</td><td><span class="badge-compliant">COMPLIANT</span></td></tr>
+        <tr><td>7</td><td>Research Rotation (R3: 6 weeks protected)</td><td>Days 7–8: Research program orientation</td><td>Annual Research Day; milestone tracking R1–R4</td><td><span class="badge-compliant">COMPLIANT</span></td></tr>
+        <tr><td>8</td><td>Senior Subspecialties: Oncology (12w), REI (8w), Urogynecology (8w)</td><td>Day 5: Oncology overview; Days 1–2: Curriculum overview</td><td>Mini-CEX ×2; CBD ×1; DOPS ×1; MSF per rotation</td><td><span class="badge-compliant">COMPLIANT</span></td></tr>
+        <tr><td>9</td><td>Academic Activities (Morning Report, Grand Rounds, Journal Club)</td><td>Day 6: Academic activities orientation</td><td>Weekly academic schedule; attendance ≥75%</td><td><span class="badge-compliant">COMPLIANT</span></td></tr>
+        <tr><td>10</td><td>Mandatory Simulation Courses (BLS, Surgical Skills, CTG, Obstetric Emergencies)</td><td>Days 3, 4, 7: BLS, drills, CTG, obstetric simulation</td><td>Annual workshops; completion certificates tracked</td><td><span class="badge-compliant">COMPLIANT</span></td></tr>
+        <tr><td>11</td><td>Research Requirements (Supervised Research Project, R1–R4 milestones)</td><td>Days 7–8: Research orientation &amp; methodology workshop</td><td>Annual Research Day; IRB; preceptor forms; manuscript</td><td><span class="badge-compliant">COMPLIANT</span></td></tr>
+        <tr><td>12</td><td>Patient Safety &amp; QI (SPSC standards)</td><td>Days 2–3: Patient safety culture, IRS, risk management</td><td>M&amp;M meetings; IRS entries; QI projects</td><td><span class="badge-compliant">COMPLIANT</span></td></tr>
+        <tr><td>13</td><td>CanMEDS Competency Framework (7 Roles)</td><td>Days 1–10: All sessions mapped to CanMEDS roles</td><td>All WBAs annotated with CanMEDS roles</td><td><span class="badge-compliant">COMPLIANT</span></td></tr>
+        <tr><td>14</td><td>Procedural Skills Progression P1–P4 (per year)</td><td>Days 4, 5, 9, 10: Supervised clinical and OR exposure</td><td>DOPS per procedure milestone; logbook records</td><td><span class="badge-compliant">COMPLIANT</span></td></tr>
+        <tr><td>15</td><td>Assessment System (Mini-CEX, CBD, DOPS, MSF, ITER, FITER)</td><td>Day 8: Assessment framework orientation; pre/post assessment</td><td>Continuous WBAs; annual review; FITER at R5</td><td><span class="badge-compliant">COMPLIANT</span></td></tr>
+        <tr><td>16</td><td>Saudi Board Examination Pathway (Part I after R3, Part II after R5)</td><td>Day 8: Examination pathway information session</td><td>Annual in-training exams; FITER/CCR; board results</td><td><span class="badge-compliant">COMPLIANT</span></td></tr>
+        <tr><td>17</td><td>Mentorship Program (assigned mentor per resident)</td><td>Day 8: Mentor assignment and program overview</td><td>Monthly documented mentor–mentee meetings</td><td><span class="badge-compliant">COMPLIANT</span></td></tr>
+        <tr><td>18</td><td>Duty Hours, On-Call Scheduling, Leave Policy</td><td>Days 1–2: HR onboarding and policy orientation</td><td>Monthly scheduling; PD monitoring</td><td><span class="badge-compliant">COMPLIANT</span></td></tr>
+        <tr><td>19</td><td>Infection Control &amp; Mandatory Hospital Policies</td><td>Day 3: IPC orientation; Day 5: Surgical safety</td><td>Annual IPC re-certification; compliance monitoring</td><td><span class="badge-compliant">COMPLIANT</span></td></tr>
+        <tr><td>20</td><td>Core Education Program (CEP): Universal Topics 15%; Specialty 70%; TST 15%</td><td>Day 6: CEP orientation</td><td>Weekly academic half-day; TST ≥1/year/resident</td><td><span class="badge-compliant">COMPLIANT</span></td></tr>
+        <tr><td>21</td><td>Elective Rotation (R5: 4 weeks)</td><td>Days 1–2: Curriculum overview</td><td>Elective approval by PD; ITER from elective supervisor</td><td><span class="badge-compliant">COMPLIANT</span></td></tr>
+        <tr><td>22</td><td>Wellness &amp; Support Systems (Mentorship, EAP, Burnout Prevention)</td><td>Day 8: Wellness and burnout prevention workshop</td><td>Monthly mentor meetings; annual wellness workshop; EAP</td><td><span class="badge-compliant">COMPLIANT</span></td></tr>
+      </tbody>
+    </table>
+    <div style="background:#d4edda; border: 1px solid #c3e6cb; border-radius:6px; padding:14px 18px; margin-top:16px;">
+      <p style="font-size:0.9rem; color:#155724; font-weight:700;">COMPLIANCE SUMMARY: 22 of 22 components COMPLIANT (100%) | SCFHS Standard: "Delivers All Components of the Training Program Curriculum" — FULLY MET</p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>OB/GYN Residency Orientation Program Dashboard | Maternity &amp; Children Hospital, Hafr Al-Batin | SCFHS Accredited Program | Document No. MCH-OBG-ORI-2026-01 | Version 1.0 | Effective 01 January 2026</p>
+</footer>
+
+<script>
+// ── TAB SWITCHING ──
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+  setTimeout(() => { window.dispatchEvent(new Event('resize')); }, 100);
+}
+
+// ── CHART 1: CEP Breakdown ──
+const cepChart = echarts.init(document.getElementById('cep-chart'));
+cepChart.setOption({
+  tooltip: { trigger: 'item', formatter: '{b}: {c}%' },
+  color: ['#1a4975', '#0d7c66', '#e67e22'],
+  series: [{
+    type: 'pie', radius: ['40%', '70%'], avoidLabelOverlap: true,
+    itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+    label: { formatter: '{b}\n{c}%', fontSize: 11 },
+    data: [
+      { value: 15, name: 'Universal Topics (15%)' },
+      { value: 70, name: 'Core Specialty Topics (70%)' },
+      { value: 15, name: 'Trainee-Selected Topics (15%)' }
+    ]
+  }]
+});
+
+// ── CHART 2: Rotation overview ──
+const rotChart = echarts.init(document.getElementById('rotation-chart'));
+rotChart.setOption({
+  tooltip: { trigger: 'axis' },
+  color: ['#1a4975', '#e67e22', '#0d7c66'],
+  legend: { data: ['General OB/GYN', 'Subspecialty', 'Research'], bottom: 0, fontSize: 11 },
+  xAxis: { type: 'category', data: ['R1', 'R2', 'R3', 'R4', 'R5'] },
+  yAxis: { type: 'value', name: 'Weeks', max: 55 },
+  series: [
+    { name: 'General OB/GYN', type: 'bar', stack: 'total', data: [52, 40, 28, 24, 48] },
+    { name: 'Subspecialty', type: 'bar', stack: 'total', data: [0, 12, 18, 28, 4] },
+    { name: 'Research', type: 'bar', stack: 'total', data: [0, 0, 6, 0, 0] }
+  ]
+});
+
+// ── CHART 3: Weeks per year ──
+const weeksChart = echarts.init(document.getElementById('weeks-chart'));
+weeksChart.setOption({
+  tooltip: { trigger: 'axis' },
+  color: ['#1a4975', '#2e86ab', '#0d7c66', '#e67e22', '#6c3483'],
+  xAxis: { type: 'category', data: ['R1', 'R2', 'R3', 'R4', 'R5'] },
+  yAxis: { type: 'value', name: 'Weeks', max: 60 },
+  series: [{ name: 'Training Weeks', type: 'bar', barWidth: '50%',
+    data: [
+      { value: 52, itemStyle: { color: '#1a4975' } },
+      { value: 52, itemStyle: { color: '#2e86ab' } },
+      { value: 52, itemStyle: { color: '#0d7c66' } },
+      { value: 52, itemStyle: { color: '#e67e22' } },
+      { value: 52, itemStyle: { color: '#6c3483' } }
+    ],
+    label: { show: true, position: 'top', formatter: '{c}w' }
+  }]
+});
+
+// ── CHART 4: Rotation type distribution ──
+const rotTypeChart = echarts.init(document.getElementById('rotation-type-chart'));
+rotTypeChart.setOption({
+  tooltip: { trigger: 'item' },
+  color: ['#1a4975', '#2e86ab', '#0d7c66', '#e67e22', '#6c3483', '#c0392b'],
+  series: [{
+    type: 'pie', radius: '65%',
+    label: { fontSize: 10 },
+    data: [
+      { value: 210, name: 'General OB/GYN' },
+      { value: 12, name: 'NICU/Anaes/ICU' },
+      { value: 22, name: 'MFM+Ultrasound+FP' },
+      { value: 6, name: 'Research' },
+      { value: 28, name: 'Senior Subspecialties' },
+      { value: 4, name: 'Elective' }
+    ]
+  }]
+});
+
+// ── CHART 5: Competency Radar ──
+const radarChart = echarts.init(document.getElementById('competency-radar'));
+radarChart.setOption({
+  tooltip: {},
+  legend: { data: ['R1 Level', 'R3 Level', 'R5 Level'], bottom: 0 },
+  radar: {
+    indicator: [
+      { name: 'Medical Expert', max: 5 },
+      { name: 'Communicator', max: 5 },
+      { name: 'Collaborator', max: 5 },
+      { name: 'Manager', max: 5 },
+      { name: 'Health Advocate', max: 5 },
+      { name: 'Scholar', max: 5 },
+      { name: 'Professional', max: 5 }
+    ]
+  },
+  series: [{
+    type: 'radar',
+    data: [
+      { name: 'R1 Level', value: [1, 1, 1, 1, 1, 1, 2], areaStyle: { opacity: 0.1 }, lineStyle: { color: '#2e86ab' } },
+      { name: 'R3 Level', value: [3, 3, 3, 2, 2, 2, 3], areaStyle: { opacity: 0.1 }, lineStyle: { color: '#0d7c66' } },
+      { name: 'R5 Level', value: [5, 5, 5, 4, 4, 4, 5], areaStyle: { opacity: 0.15 }, lineStyle: { color: '#1a4975' } }
+    ]
+  }]
+});
+
+// ── CHART 6: KPI Bar Chart ──
+const kpiBar = echarts.init(document.getElementById('kpi-bar-chart'));
+kpiBar.setOption({
+  tooltip: { trigger: 'axis' },
+  color: ['#0d7c66', '#2e86ab'],
+  legend: { data: ['Target', 'Required'], bottom: 0 },
+  xAxis: { type: 'category', data: ['Orientation\nCompletion', 'Academic\nAttendance', 'Workshop\nCompletion', 'ITER\nTimeliness', 'Mini-CEX\nRate', 'Annual\nMSF', 'FITER\nCompletion'], axisLabel: { fontSize: 10 } },
+  yAxis: { type: 'value', name: '%', max: 110 },
+  series: [
+    { name: 'Target', type: 'bar', barWidth: '35%', data: [100, 75, 100, 100, 100, 100, 100] },
+    { name: 'Required', type: 'line', data: [100, 75, 100, 100, 100, 100, 100], lineStyle: { type: 'dashed', color: '#c0392b' } }
+  ]
+});
+
+// ── CHART 7: Gauge ──
+const gaugeChart = echarts.init(document.getElementById('kpi-gauge'));
+gaugeChart.setOption({
+  series: [
+    {
+      type: 'gauge', radius: '70%', center: ['25%', '55%'],
+      min: 0, max: 100,
+      progress: { show: true, width: 12 },
+      axisLine: { lineStyle: { width: 12 } },
+      axisTick: { show: false },
+      splitLine: { length: 8 },
+      axisLabel: { distance: 14, fontSize: 10 },
+      anchor: { show: false },
+      detail: { valueAnimation: true, formatter: '{value}%', fontSize: 18, offsetCenter: [0, '60%'], color: '#1a4975' },
+      title: { offsetCenter: [0, '88%'], fontSize: 11, color: '#546e7a' },
+      data: [{ value: 80, name: 'Board Part I Target' }]
+    },
+    {
+      type: 'gauge', radius: '70%', center: ['75%', '55%'],
+      min: 0, max: 100,
+      progress: { show: true, width: 12, itemStyle: { color: '#0d7c66' } },
+      axisLine: { lineStyle: { width: 12 } },
+      axisTick: { show: false },
+      splitLine: { length: 8 },
+      axisLabel: { distance: 14, fontSize: 10 },
+      anchor: { show: false },
+      detail: { valueAnimation: true, formatter: '{value}%', fontSize: 18, offsetCenter: [0, '60%'], color: '#0d7c66' },
+      title: { offsetCenter: [0, '88%'], fontSize: 11, color: '#546e7a' },
+      data: [{ value: 80, name: 'Board Part II Target' }]
+    }
+  ]
+});
+
+window.addEventListener('resize', () => {
+  [cepChart, rotChart, weeksChart, rotTypeChart, radarChart, kpiBar, gaugeChart].forEach(c => c.resize());
+});
+</script>
+</body>
+</html>
